@@ -1,15 +1,16 @@
 package jsonmuncher
 
 import (
-	"io"
-	"fmt"
 	"errors"
+	"fmt"
+	"io"
 	"strconv"
 	"unicode/utf8"
 )
 
 // special errors
 var EndOfValue error = errors.New("End of value reached")
+var UnexpectedEOF error = errors.New("Unexpected end of file")
 
 // the data type of a JSON value
 type JsonType byte
@@ -43,19 +44,19 @@ const (
 // - escape[s123]: buffer for string unicode escapes (see readUnicode function)
 // - curr: the lookahead value
 type Buffer struct {
-	data []byte
-	stream io.Reader
-	err error
+	data    []byte
+	stream  io.Reader
+	err     error
 	readerr error
-	offs uint32
+	offs    uint32
 	erroffs uint32
-	depth uint32
+	depth   uint32
 	escapes byte
 	escape1 byte
 	escape2 byte
 	escape3 byte
 	escape4 byte
-	curr byte
+	curr    byte
 }
 
 // a JSON value:
@@ -68,11 +69,11 @@ type Buffer struct {
 //     first element has been read
 // - keynext: if object, whether the next thing to read is a key
 type JsonValue struct {
-	buffer *Buffer
-	numval float64
-	depth uint32
-	Type JsonType
-	Status JsonStatus
+	buffer  *Buffer
+	numval  float64
+	depth   uint32
+	Type    JsonType
+	Status  JsonStatus
 	boolval bool
 	keynext bool
 }
@@ -93,8 +94,17 @@ func feedq(buf *Buffer) bool {
 // assuming feedq is true, feed the buffer with the next chunk
 // cannot be inlined, because of the call to Read()
 func feed(buf *Buffer) bool {
-	erroffs, readerr := buf.stream.Read(buf.data)
-	buf.readerr = readerr
+	var erroffs, readoffs int
+	var readerr error
+	for erroffs < len(buf.data) && readerr == nil {
+		readoffs, readerr = buf.stream.Read(buf.data[erroffs:])
+		erroffs += readoffs
+	}
+	if readerr == io.EOF {
+		buf.readerr = UnexpectedEOF
+	} else {
+		buf.readerr = readerr
+	}
 	buf.erroffs = uint32(erroffs)
 	buf.err = nil
 	buf.offs = 0
@@ -118,15 +128,19 @@ func skipSpace(buf *Buffer) (byte, error) {
 		return 0, buf.err
 	}
 	c := buf.curr
-	for c == ' ' || c == '\t' || c == '\r' || c == '\n' {
-		_ = feedq(buf) && feed(buf)
-		next(buf)
-		if buf.err != nil {
-			return 0, buf.err
+	for {
+		switch c {
+		case ' ', '\t', '\r', '\n':
+			_ = feedq(buf) && feed(buf)
+			next(buf)
+			if buf.err != nil {
+				return 0, buf.err
+			}
+			c = buf.curr
+		default:
+			return c, nil
 		}
-		c = buf.curr
 	}
-	return c, nil
 }
 
 // read a boolean or null value from the stream
@@ -143,8 +157,6 @@ func readKeyword(buf *Buffer) (JsonValue, error) {
 		val = true
 	case 'f':
 		kw = "false"
-	default:
-		return JsonValue{}, errors.New(fmt.Sprintf("Expected 'null', 'true', or 'false', got %q", buf.curr))
 	}
 	for i := 1; i < len(kw); i += 1 {
 		_ = feedq(buf) && feed(buf)
@@ -165,7 +177,8 @@ func readNumber(buf *Buffer) (JsonValue, error) {
 	var b [32]byte
 	sl := b[:0]
 	simple := true
-	L: for buf.err != io.EOF {
+L:
+	for buf.err != UnexpectedEOF {
 		if buf.err != nil {
 			return JsonValue{}, buf.err
 		}
@@ -194,7 +207,7 @@ func readNumber(buf *Buffer) (JsonValue, error) {
 		}
 		for ; idx < len(sl); idx += 1 {
 			if sl[idx] <= '9' && sl[idx] >= '0' {
-				val = 10*val + int64(sl[idx] - '0')
+				val = 10*val + int64(sl[idx]-'0')
 			} else {
 				return JsonValue{}, errors.New("Bad formatting in number: unexpected non-digit symbol")
 			}
@@ -224,8 +237,6 @@ func readStream(buf *Buffer) (JsonValue, error) {
 		typ = Object
 	case '[':
 		typ = Array
-	default:
-		return JsonValue{}, errors.New(fmt.Sprintf("Expected '\"', '{', or '[', got %q", buf.curr))
 	}
 	buf.depth += 1
 	return JsonValue{buf, 0, buf.depth, typ, Working, false, typ == Object}, nil
@@ -261,15 +272,15 @@ func Parse(r io.Reader, size int) (JsonValue, error) {
 	return readValue(&buf)
 }
 
-var escapemap = [...]byte {
-	'"': '"',
-	'/': '/',
+var escapemap = [...]byte{
+	'"':  '"',
+	'/':  '/',
 	'\\': '\\',
-	'b': '\b',
-	'f': '\f',
-	'n': '\n',
-	'r': '\r',
-	't': '\t',
+	'b':  '\b',
+	'f':  '\f',
+	'n':  '\n',
+	'r':  '\r',
+	't':  '\t',
 }
 
 // Reader interface (string values only)
@@ -278,7 +289,7 @@ func (data *JsonValue) Read(b []byte) (int, error) {
 		return 0, errors.New("Operation only permitted for in-progress string values")
 	}
 	i := 0
-	if data.buffer.escapes != 0 {
+	if data.buffer.escapes > 0 {
 		i = streamEscape(data.buffer, b, 0)
 	}
 	for ; i < len(b); i += 1 {
@@ -287,13 +298,14 @@ func (data *JsonValue) Read(b []byte) (int, error) {
 			return i, data.buffer.err
 		}
 		c := data.buffer.curr
-		if c == '"' {
+		switch {
+		case c == '"':
 			_ = feedq(data.buffer) && feed(data.buffer)
 			next(data.buffer)
 			data.Status = Complete
 			data.buffer.depth -= 1
 			return i, io.EOF
-		} else if c == '\\' {
+		case c == '\\':
 			_ = feedq(data.buffer) && feed(data.buffer)
 			next(data.buffer)
 			if data.buffer.err != nil {
@@ -317,10 +329,10 @@ func (data *JsonValue) Read(b []byte) (int, error) {
 				data.Status = Incomplete
 				return i, errors.New("Escape in string literal must be followed by \", /, \\, b, f, n, r, t, or u")
 			}
-		} else if c <= '\x1F' {
+		case c <= '\x1F':
 			data.Status = Incomplete
 			return i, errors.New("Control characters are not allowed in string literals")
-		} else {
+		default:
 			_ = feedq(data.buffer) && feed(data.buffer)
 			next(data.buffer)
 			b[i] = c
@@ -362,7 +374,7 @@ func readUnicode(buf *Buffer) error {
 		if pt2 < 0xDC00 || pt2 > 0xDFFF {
 			return errors.New("Expected UTF-16 surrogate pair")
 		}
-		cp = 0x10000 + rune(pt1 - 0xD800)<<10 + rune(pt2 - 0xDC00)
+		cp = 0x10000 + rune(pt1-0xD800)<<10 + rune(pt2-0xDC00)
 	} else {
 		cp = rune(pt1)
 	}
@@ -395,11 +407,11 @@ func parseHex(buf *Buffer) (uint16, error) {
 		}
 		switch {
 		case buf.curr <= '9' && buf.curr >= '0':
-			n = n<<4 + uint16(buf.curr - '0')
+			n = n<<4 + uint16(buf.curr-'0')
 		case buf.curr <= 'F' && buf.curr >= 'A':
-			n = n<<4 + uint16(buf.curr - 'A' + 10)
+			n = n<<4 + uint16(buf.curr-'A'+10)
 		case buf.curr <= 'f' && buf.curr >= 'a':
-			n = n<<4 + uint16(buf.curr - 'a' + 10)
+			n = n<<4 + uint16(buf.curr-'a'+10)
 		default:
 			return 0, errors.New(fmt.Sprintf("Unicode escapes must be four-digit hex values, not %q", buf.curr))
 		}
@@ -421,8 +433,6 @@ func streamEscape(buf *Buffer, b []byte, i int) int {
 			b[i] = buf.escape3
 		case 4:
 			b[i] = buf.escape4
-		default:
-			return i
 		}
 		buf.escapes += 1
 		i += 1
@@ -510,7 +520,7 @@ func (data *JsonValue) NextKey() (JsonValue, error) {
 	val, err1 := readValue(data.buffer)
 	if err1 != nil {
 		data.Status = Incomplete
-		return JsonValue{}, err
+		return JsonValue{}, err1
 	}
 	if val.Type != String {
 		data.Status = Incomplete
@@ -552,7 +562,7 @@ func objectNextValue(data *JsonValue) (JsonValue, error) {
 	val, err1 := readValue(data.buffer)
 	if err1 != nil {
 		data.Status = Incomplete
-		return JsonValue{}, err
+		return JsonValue{}, err1
 	}
 	data.keynext = true
 	return val, nil
@@ -602,7 +612,7 @@ func arrayNextValue(data *JsonValue) (JsonValue, error) {
 	val, err1 := readValue(data.buffer)
 	if err1 != nil {
 		data.Status = Incomplete
-		return JsonValue{}, err
+		return JsonValue{}, err1
 	}
 	data.boolval = true
 	return val, nil
@@ -629,11 +639,7 @@ func (data *JsonValue) Close() error {
 	}
 	if data.boolval == false {
 		if data.Type == Object && data.buffer.curr == '{' ||
-			data.Type == Array && data.buffer.curr == '['{
-			if data.buffer.err != nil {
-				data.Status = Incomplete
-				return data.buffer.err
-			}
+			data.Type == Array && data.buffer.curr == '[' {
 			_ = feedq(data.buffer) && feed(data.buffer)
 			next(data.buffer)
 		}
@@ -661,7 +667,7 @@ func (data *JsonValue) Close() error {
 			}
 		} else {
 			switch c {
-			case '}',']':
+			case '}', ']':
 				depth -= 1
 			case '"':
 				instr = true
