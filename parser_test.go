@@ -326,6 +326,76 @@ func TestCloser(t *testing.T) {
 	}
 }
 
+func TestCompareHelper(t *testing.T) {
+	json := "[\"match1\",\"match2\",\"nomatch\"]"
+	r := strings.NewReader(json)
+	v1, e1 := Parse(r, 16)
+	if v1.Type != Array || e1 != nil {
+		t.Fatal("1", v1.Type, e1)
+	}
+	v2, e2 := v1.NextValue()
+	if v2.Type != String || e2 != nil {
+		t.Fatal("2", v2.Type, e2)
+	}
+	sk, mk, ek := v2.Compare("match1", "match2")
+	if sk != "match1" || mk != true || ek != nil {
+		t.Fatal("3", sk, mk, ek)
+	}
+	v2, e2 = v1.NextValue()
+	if v2.Type != String || e2 != nil {
+		t.Fatal("4", v2.Type, e2)
+	}
+	sk, mk, ek = v2.Compare()
+	if sk != "" || mk != false || ek == nil || ek.Error() != "No match values specified" {
+		t.Fatal("5", sk, mk, ek)
+	}
+	sk, mk, ek = v2.Compare("match1", "match2")
+	if sk != "match2" || mk != true || ek != nil {
+		t.Fatal("6", sk, mk, ek)
+	}
+	v2, e2 = v1.NextValue()
+	if v2.Type != String || e2 != nil {
+		t.Fatal("7", v2.Type, e2)
+	}
+	sk, mk, ek = v2.Compare("match1", "match2")
+	if sk != "" || mk != false || ek != nil {
+		t.Fatal("8", sk, mk, ek)
+	}
+}
+
+func TestFindKeyHelper(t *testing.T) {
+	json := "{\"foo\":1,\"bar\":2,\"baz\":3,\"ban\":4}"
+	r := strings.NewReader(json)
+	v1, e1 := Parse(r, 16)
+	if v1.Type != Object || e1 != nil {
+		t.Fatal("1", v1.Type, e1)
+	}
+	sk, vk, mk, ek := v1.FindKey("bar", "baz", "ban")
+	if sk != "bar" || mk != true || ek != nil {
+		t.Fatal("2", sk, mk, ek)
+	}
+	vn, en := vk.ValueNum()
+	if vn != 2 || en != nil {
+		t.Fatal("3", vn, en)
+	}
+	sk, vk, mk, ek = v1.FindKey()
+	if sk != "" || mk != false || ek == nil || ek.Error() != "No search keys specified" {
+		t.Fatal("4", sk, mk, ek)
+	}
+	sk, vk, mk, ek = v1.FindKey("bar", "baz", "ban")
+	if sk != "baz" || mk != true || ek != nil {
+		t.Fatal("5", sk, mk, ek)
+	}
+	vn, en = vk.ValueNum()
+	if vn != 3 || en != nil {
+		t.Fatal("6", vn, en)
+	}
+	sk, vk, mk, ek = v1.FindKey("bank")
+	if sk != "" || mk != false || ek != nil {
+		t.Fatal("7", sk, mk, ek)
+	}
+}
+
 // failure states
 
 func TestEOFErrors(t *testing.T) {
@@ -404,6 +474,36 @@ func TestEOFErrors(t *testing.T) {
 	}
 }
 
+func TestFindKeyEOFErrors(t *testing.T) {
+	r := strings.NewReader("{foo")
+	v1, e1 := Parse(r, 16)
+	if v1.Type != Object || e1 != nil {
+		t.Fatal("1", v1.Type, e1)
+	}
+	sk, _, mk, ek := v1.FindKey("foo")
+	if ek == nil {
+		t.Fatal("2", sk, mk, ek)
+	}
+	r = strings.NewReader("{\"foo")
+	v1, e1 = Parse(r, 16)
+	if v1.Type != Object || e1 != nil {
+		t.Fatal("3", v1.Type, e1)
+	}
+	sk, _, mk, ek = v1.FindKey("foo")
+	if ek == nil {
+		t.Fatal("4", sk, mk, ek)
+	}
+	r = strings.NewReader("{\"foo\":1ee1}")
+	v1, e1 = Parse(r, 16)
+	if v1.Type != Object || e1 != nil {
+		t.Fatal("5", v1.Type, e1)
+	}
+	sk, _, mk, ek = v1.FindKey("foo")
+	if ek == nil {
+		t.Fatal("6", sk, mk, ek)
+	}
+}
+
 func TestBadKeywordErrors(t *testing.T) {
 	r := strings.NewReader("nule")
 	_, e1 := Parse(r, 16)
@@ -459,19 +559,19 @@ func TestBadStringErrors(t *testing.T) {
 	v, _ = Parse(r, 16)
 	_, e1 = v.Read(buf[:])
 	if e1 == nil || e1.Error() != "Expected UTF-16 surrogate pair" {
-		t.Fatal("3", e1)
+		t.Fatal("4", e1)
 	}
 	r = strings.NewReader("\"\\uD83E\\u00B0\"")
 	v, _ = Parse(r, 16)
 	_, e1 = v.Read(buf[:])
 	if e1 == nil || e1.Error() != "Expected UTF-16 surrogate pair" {
-		t.Fatal("3", e1)
+		t.Fatal("5", e1)
 	}
 	r = strings.NewReader("\"\\uD83Gx\"")
 	v, _ = Parse(r, 16)
 	_, e1 = v.Read(buf[:])
 	if e1 == nil || e1.Error() != "Unicode escapes must be four-digit hex values, not 'G'" {
-		t.Fatal("4", e1)
+		t.Fatal("6", e1)
 	}
 }
 
@@ -487,20 +587,20 @@ func TestBadObjectErrors(t *testing.T) {
 	v.NextValue()
 	_, e1 = v.NextValue()
 	if e1 == nil || e1.Error() != "Expected ',', got ':'" {
-		t.Fatal("1", e1)
+		t.Fatal("2", e1)
 	}
 	r = strings.NewReader("[true:false]")
 	v, _ = Parse(r, 16)
 	v.NextValue()
 	_, e1 = v.NextValue()
 	if e1 == nil || e1.Error() != "Expected ',', got ':'" {
-		t.Fatal("2", e1)
+		t.Fatal("3", e1)
 	}
 	r = strings.NewReader("{true:false}")
 	v, _ = Parse(r, 16)
 	_, e1 = v.NextKey()
 	if e1 == nil || e1.Error() != "Object keys must be string values" {
-		t.Fatal("3", e1)
+		t.Fatal("4", e1)
 	}
 }
 

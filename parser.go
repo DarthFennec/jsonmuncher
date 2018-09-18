@@ -683,3 +683,76 @@ func (data *JsonValue) Close() error {
 	data.buffer.depth -= 1
 	return nil
 }
+
+// sort the inputs in-place. usually this is a short list, and may already be
+// sorted (or mostly sorted), so a simple insertion sort is a good choice here
+func simpleSort(vals []string) {
+	for i := 1; i < len(vals); i += 1 {
+		for j := i; j > 0 && vals[j] < vals[j-1]; j -= 1 {
+			vals[j], vals[j-1] = vals[j-1], vals[j]
+		}
+	}
+}
+
+// read a value and do a comparison against the given slice of strings
+// the strings must be sorted for this to work properly
+func compareRead(data *JsonValue, vals []string) (string, bool, error) {
+	var buf [16]byte
+	x, y, z := 0, 0, 0
+	for {
+		l, err := data.Read(buf[:])
+		if err != nil && err != io.EOF {
+			return "", false, err
+		}
+		y = z
+		z += l
+		for {
+			if len(vals[x]) >= z && vals[x][y:z] == string(buf[:l]) {
+				break
+			} else if x + 1 >= len(vals) || vals[x][:y] != vals[x+1][:y] {
+				return "", false, data.Close()
+			}
+			x += 1
+		}
+		if err == io.EOF && z == len(vals[x]) {
+			return vals[x], true, nil
+		} else if err == io.EOF {
+			return "", false, nil
+		}
+	}
+}
+
+// helper function: read a string value and compare it against the given strings
+func (data *JsonValue) Compare(vals ...string) (string, bool, error) {
+	if len(vals) <= 0 {
+		return "", false, errors.New("No match values specified")
+	}
+	simpleSort(vals)
+	return compareRead(data, vals)
+}
+
+// helper function: skip ahead to one of a number of given keys in an object
+func (data *JsonValue) FindKey(keys ...string) (string, JsonValue, bool, error) {
+	if len(keys) <= 0 {
+		return "", JsonValue{}, false, errors.New("No search keys specified")
+	}
+	simpleSort(keys)
+	for {
+		key, err := data.NextKey()
+		if err == EndOfValue {
+			return "", JsonValue{}, false, nil
+		} else if err != nil {
+			return "", JsonValue{}, false, err
+		}
+		k, match, err1 := compareRead(&key, keys)
+		if err1 != nil {
+			return "", JsonValue{}, false, err1
+		} else if match {
+			val, err := data.NextValue()
+			if err != nil {
+				return "", JsonValue{}, false, err
+			}
+			return k, val, true, nil
+		}
+	}
+}
