@@ -646,42 +646,64 @@ func (data *JsonValue) Close() error {
 	}
 	instr := data.Type == String
 	depth := 0
-	for depth >= 0 {
+	for {
 		if data.buffer.err != nil {
 			data.Status = Incomplete
 			return data.buffer.err
 		}
-		c := data.buffer.curr
+		i := data.buffer.offs - 1
+	InStr:
 		if instr {
-			switch c {
-			case '\\':
-				_ = feedq(data.buffer) && feed(data.buffer)
-				next(data.buffer)
-				if data.buffer.err != nil {
-					data.Status = Incomplete
-					return data.buffer.err
+			for i < data.buffer.erroffs {
+				switch data.buffer.data[i] {
+				case '\\':
+					i += 1
+				case '"':
+					if data.Type == String {
+						data.buffer.offs = i + 1
+						_ = feedq(data.buffer) && feed(data.buffer)
+						next(data.buffer)
+						data.Status = Complete
+						data.buffer.depth -= 1
+						return nil
+					} else {
+						instr = false
+						i += 1
+						goto InStr
+					}
 				}
-			case '"':
-				instr = false
-				depth -= 1
+				i += 1
 			}
 		} else {
-			switch c {
-			case '}', ']':
-				depth -= 1
-			case '"':
-				instr = true
-				fallthrough
-			case '{', '[':
-				depth += 1
+			for i < data.buffer.erroffs {
+				switch data.buffer.data[i] {
+				case '{', '[':
+					depth += 1
+				case '}', ']':
+					depth -= 1
+					if depth < 0 {
+						data.buffer.offs = i + 1
+						_ = feedq(data.buffer) && feed(data.buffer)
+						next(data.buffer)
+						data.Status = Complete
+						data.buffer.depth -= 1
+						return nil
+					}
+				case '"':
+					instr = true
+					i += 1
+					goto InStr
+				}
+				i += 1
 			}
 		}
-		_ = feedq(data.buffer) && feed(data.buffer)
+		data.buffer.offs = data.buffer.erroffs
+		if feedq(data.buffer) {
+			feed(data.buffer)
+			data.buffer.offs = i - uint32(len(data.buffer.data))
+		}
 		next(data.buffer)
 	}
-	data.Status = Complete
-	data.buffer.depth -= 1
-	return nil
 }
 
 // sort the inputs in-place. usually this is a short list, and may already be
