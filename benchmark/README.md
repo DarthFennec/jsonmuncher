@@ -5,8 +5,8 @@ These benchmarks compare a number of different Go JSON parsers. Four different
 JSON files are parsed:
 
 - `fixture_small.json`: 190 B
-- `fixture_large.json`: 2.3 KB
-- `fixture_medium.json`: 41 KB
+- `fixture_medium.json`: 2.3 KB
+- `fixture_large.json`: 41 KB
 - `fixture_huge.json`: 333 MB
 
 To run the benchmarks yourself, use `make build` to build the Docker image, then

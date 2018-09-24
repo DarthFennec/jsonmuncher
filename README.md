@@ -42,7 +42,7 @@ Performance
 -----------
 
 If you want to see the raw benchmarks or run them yourself,
-[go here](https://github.com/darthfennec/jsonmuncher/benchmark/).
+[go here](https://github.com/darthfennec/jsonmuncher/tree/master/benchmark/).
 
 ### Speed
 
@@ -115,6 +115,9 @@ API Reference
 -------------
 
 The API lives in the `jsonmuncher` package.
+
+If the end of the stream is unexpectedly reached at any point, a
+`jsonmuncher.UnexpectedEOF` error is returned.
 
 ### `Parse()`
 
