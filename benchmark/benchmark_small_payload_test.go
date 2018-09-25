@@ -10,6 +10,8 @@ import (
 
 	"github.com/darthfennec/jsonmuncher"
 	"github.com/json-iterator/go"
+	"github.com/bcicen/jstream"
+	"github.com/francoispqt/gojay"
 	"github.com/Jeffail/gabs"
 	"github.com/a8m/djson"
 	"github.com/antonholmquist/jason"
@@ -83,6 +85,54 @@ func BenchmarkEncodingJsonInterfaceSmall(b *testing.B) {
 	}
 }
 
+func BenchmarkEncodingJsonStreamStructSmall(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		smallFixture, _ := os.Open("./fixture_small.json")
+		var data SmallPayload
+		json.NewDecoder(smallFixture).Decode(&data)
+
+		nothing(data.Uuid, data.Tz, data.Ua, data.St)
+	}
+}
+
+func BenchmarkEncodingJsonStreamInterfaceSmall(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		smallFixture, _ := os.Open("./fixture_small.json")
+		var data interface{}
+		json.NewDecoder(smallFixture).Decode(&data)
+		m := data.(map[string]interface{})
+
+		nothing(m["uuid"].(string), m["tz"].(float64), m["ua"].(string), m["st"].(float64))
+	}
+}
+
+/*
+   github.com/bcicen/jstream
+*/
+func BenchmarkJstreamSmall(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		smallFixture, _ := os.Open("./fixture_small.json")
+		decoder := jstream.NewDecoder(smallFixture, 0)
+		for c := range decoder.Stream() {
+			m := c.Value.(map[string]interface{})
+			nothing(m["uuid"].(string), m["tz"].(float64), m["ua"].(string), m["st"].(float64))
+		}
+	}
+}
+
+/*
+   github.com/francoispqt/gojay
+*/
+func BenchmarkGojaySmall(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		smallFixture, _ := ioutil.ReadFile("./fixture_small.json")
+		var data SmallPayload
+		gojay.UnmarshalJSONObject(smallFixture, &data)
+
+		nothing(data.Uuid, data.Tz, data.Ua, data.St)
+	}
+}
+
 /*
    github.com/json-iterator/go
 */
@@ -116,7 +166,7 @@ func BenchmarkGabsSmall(b *testing.B) {
 /*
    github.com/bitly/go-simplejson
 */
-func BenchmarkGoSimplejsonSmall(b *testing.B) {
+func BenchmarkGoSimpleJsonSmall(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		smallFixture, _ := ioutil.ReadFile("./fixture_small.json")
 		json, _ := simplejson.NewJson(smallFixture)

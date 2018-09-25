@@ -10,6 +10,8 @@ import (
 
 	"github.com/darthfennec/jsonmuncher"
 	"github.com/json-iterator/go"
+	"github.com/bcicen/jstream"
+	"github.com/francoispqt/gojay"
 	"github.com/Jeffail/gabs"
 	"github.com/a8m/djson"
 	"github.com/antonholmquist/jason"
@@ -108,6 +110,72 @@ func BenchmarkEncodingJsonInterfaceMedium(b *testing.B) {
 		nothing(name["fullName"].(string), github["followers"].(float64), company)
 		for _, a := range avatars {
 			nothing(a.(map[string]interface{})["url"])
+		}
+	}
+}
+
+func BenchmarkEncodingJsonStreamStructMedium(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		mediumFixture, _ := os.Open("./fixture_medium.json")
+		var data MediumPayload
+		json.NewDecoder(mediumFixture).Decode(&data)
+
+		nothing(data.Person.Name.FullName, data.Person.Github.Followers, data.Company)
+
+		for _, el := range data.Person.Gravatar.Avatars {
+			nothing(el.Url)
+		}
+	}
+}
+
+func BenchmarkEncodingJsonStreamInterfaceMedium(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		mediumFixture, _ := os.Open("./fixture_medium.json")
+		var data interface{}
+		json.NewDecoder(mediumFixture).Decode(&data)
+		m := data.(map[string]interface{})
+
+		person := m["person"].(map[string]interface{})
+		name := person["name"].(map[string]interface{})
+		github := person["github"].(map[string]interface{})
+		company := m["company"]
+		gravatar := person["gravatar"].(map[string]interface{})
+		avatars := gravatar["avatars"].([]interface{})
+
+		nothing(name["fullName"].(string), github["followers"].(float64), company)
+		for _, a := range avatars {
+			nothing(a.(map[string]interface{})["url"])
+		}
+	}
+}
+
+/*
+   github.com/bcicen/jstream
+*/
+func BenchmarkJstreamMedium(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		mediumFixture, _ := os.Open("./fixture_medium.json")
+		decoder := jstream.NewDecoder(mediumFixture, 4)
+		for c := range decoder.Stream() {
+			avatar := c.Value.(map[string]interface{})
+			nothing(avatar["url"].(string))
+		}
+	}
+}
+
+/*
+   github.com/francoispqt/gojay
+*/
+func BenchmarkGojayMedium(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		mediumFixture, _ := ioutil.ReadFile("./fixture_medium.json")
+		var data MediumPayload
+		gojay.UnmarshalJSONObject(mediumFixture, &data)
+
+		nothing(data.Person.Name.FullName, data.Person.Github.Followers, data.Company)
+
+		for _, el := range data.Person.Gravatar.Avatars {
+			nothing(el.Url)
 		}
 	}
 }

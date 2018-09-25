@@ -10,6 +10,8 @@ RUN go get github.com/antonholmquist/jason
 RUN go get github.com/mreiferson/go-ujson
 RUN go get -tags=unsafe github.com/ugorji/go/codec
 RUN go get github.com/mailru/easyjson
+RUN go get github.com/bcicen/jstream
+RUN go get github.com/francoispqt/gojay
 
 ADD . /go/src/github.com/darthfennec/jsonmuncher
 WORKDIR /go/src/github.com/darthfennec/jsonmuncher

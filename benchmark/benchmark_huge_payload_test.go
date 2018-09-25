@@ -11,6 +11,8 @@ import (
 
 	"github.com/darthfennec/jsonmuncher"
 	"github.com/json-iterator/go"
+	"github.com/bcicen/jstream"
+	"github.com/francoispqt/gojay"
 	"github.com/Jeffail/gabs"
 	"github.com/a8m/djson"
 	"github.com/antonholmquist/jason"
@@ -109,6 +111,72 @@ func BenchmarkEncodingJsonInterfaceHuge(b *testing.B) {
 			for _, c := range charts {
 				chart := c.(map[string]interface{})
 				nothing(chart["name"].(string), chart["version"].(string))
+			}
+		}
+	}
+}
+
+func BenchmarkEncodingJsonStreamStructHuge(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		hugeFixture, _ := os.Open("./fixture_huge.json")
+		var data IndexFile
+		json.NewDecoder(hugeFixture).Decode(&data)
+		nothing(data.APIVersion, data.Generated)
+		for chartname, entry := range data.Entries {
+			nothing(chartname)
+			for _, chart := range entry {
+				nothing(chart.Name, chart.Version)
+			}
+		}
+	}
+}
+
+func BenchmarkEncodingJsonStreamInterfaceHuge(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		hugeFixture, _ := os.Open("./fixture_huge.json")
+		var data interface{}
+		json.NewDecoder(hugeFixture).Decode(&data)
+		m := data.(map[string]interface{})
+		nothing(m["apiVersion"].(string), m["generated"].(string))
+		entries := m["entries"].(map[string]interface{})
+		for chartname, entry := range entries {
+			nothing(chartname)
+			charts := entry.([]interface{})
+			for _, c := range charts {
+				chart := c.(map[string]interface{})
+				nothing(chart["name"].(string), chart["version"].(string))
+			}
+		}
+	}
+}
+
+/*
+   github.com/bcicen/jstream
+*/
+func BenchmarkJstreamHuge(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		hugeFixture, _ := os.Open("./fixture_huge.json")
+		decoder := jstream.NewDecoder(hugeFixture, 3)
+		for c := range decoder.Stream() {
+			chart := c.Value.(map[string]interface{})
+			nothing(chart["name"].(string), chart["version"].(string))
+		}
+	}
+}
+
+/*
+   github.com/francoispqt/gojay
+*/
+func BenchmarkGojayHuge(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		hugeFixture, _ := ioutil.ReadFile("./fixture_huge.json")
+		var data IndexFile
+		gojay.UnmarshalJSONObject(hugeFixture, &data)
+		nothing(data.APIVersion, data.Generated)
+		for chartname, entry := range data.Entries {
+			nothing(chartname)
+			for _, chart := range entry {
+				nothing(chart.Name, chart.Version)
 			}
 		}
 	}

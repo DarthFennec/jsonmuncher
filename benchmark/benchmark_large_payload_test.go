@@ -11,6 +11,8 @@ import (
 
 	"github.com/darthfennec/jsonmuncher"
 	"github.com/json-iterator/go"
+	"github.com/bcicen/jstream"
+	"github.com/francoispqt/gojay"
 	"github.com/Jeffail/gabs"
 	"github.com/a8m/djson"
 	"github.com/antonholmquist/jason"
@@ -111,6 +113,91 @@ func BenchmarkEncodingJsonInterfaceLarge(b *testing.B) {
 		for _, t := range topics {
 			tI := t.(map[string]interface{})
 			nothing(tI["id"].(float64), tI["slug"].(string))
+		}
+	}
+}
+
+func BenchmarkEncodingJsonStreamStructLarge(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		largeFixture, _ := os.Open("./fixture_large.json")
+		var data LargePayload
+		json.NewDecoder(largeFixture).Decode(&data)
+
+		for _, u := range data.Users {
+			nothing(u.Username)
+		}
+
+		for _, t := range data.Topics.Topics {
+			nothing(t.Id, t.Slug)
+		}
+	}
+}
+
+func BenchmarkEncodingJsonStreamInterfaceLarge(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		largeFixture, _ := os.Open("./fixture_large.json")
+		var data interface{}
+		json.NewDecoder(largeFixture).Decode(&data)
+		m := data.(map[string]interface{})
+
+		users := m["users"].([]interface{})
+		for _, u := range users {
+			nothing(u.(map[string]interface{})["username"].(string))
+		}
+
+		topics := m["topics"].(map[string]interface{})["topics"].([]interface{})
+		for _, t := range topics {
+			tI := t.(map[string]interface{})
+			nothing(tI["id"].(float64), tI["slug"].(string))
+		}
+	}
+}
+
+/*
+   github.com/bcicen/jstream
+*/
+func BenchmarkJstreamLarge(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		largeFixture, _ := os.Open("./fixture_large.json")
+		decoder := jstream.NewDecoder(largeFixture, 2)
+		for c := range decoder.Stream() {
+			switch c.Value.(type) {
+			case map[string]interface{}:
+				user := c.Value.(map[string]interface{})
+				nothing(user["username"].(string))
+			default:
+				nothing()
+			}
+		}
+		largeFixture, _ = os.Open("./fixture_large.json")
+		decoder = jstream.NewDecoder(largeFixture, 3)
+		for c := range decoder.Stream() {
+			switch c.Value.(type) {
+			case map[string]interface{}:
+				topic := c.Value.(map[string]interface{})
+				nothing(topic["id"].(float64), topic["slug"].(string))
+			default:
+				nothing()
+			}
+		}
+	}
+}
+
+/*
+   github.com/francoispqt/gojay
+*/
+func BenchmarkGojayLarge(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		largeFixture, _ := ioutil.ReadFile("./fixture_large.json")
+		var data LargePayload
+		gojay.UnmarshalJSONObject(largeFixture, &data)
+
+		for _, u := range data.Users {
+			nothing(u.Username)
+		}
+
+		for _, t := range data.Topics.Topics {
+			nothing(t.Id, t.Slug)
 		}
 	}
 }

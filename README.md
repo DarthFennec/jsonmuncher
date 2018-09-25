@@ -46,61 +46,75 @@ If you want to see the raw benchmarks or run them yourself,
 
 ### Speed
 
-Library                                  | Small JSON  | Medium JSON | Large JSON    | Huge JSON
-:----------------------------------------|------------:|------------:|--------------:|----------------:
-[`github.com/antonholmquist/jason`][]    | 25239 ns/op | 63614 ns/op | 1022959 ns/op | 9590892930 ns/op
-[`github.com/bitly/go-simplejson`][]     | 13217 ns/op | 59932 ns/op | 991333 ns/op  | 5972472324 ns/op
-[`github.com/ugorji/go/codec`][]         | 9877 ns/op  | 57036 ns/op | 798633 ns/op  | 7792939090 ns/op
-[`github.com/Jeffail/gabs`][]            | 13063 ns/op | 54059 ns/op | 855958 ns/op  | 5822377683 ns/op
-[`github.com/mreiferson/go-ujson`][]     | 11632 ns/op | 42901 ns/op | 666410 ns/op  | 3945387376 ns/op
-[`github.com/json-iterator/go`][]        | 11449 ns/op | 31346 ns/op | 410673 ns/op  | 3322275736 ns/op
-[`github.com/a8m/djson`][]               | 10051 ns/op | 33364 ns/op | 523898 ns/op  | 2857508424 ns/op
-[`encoding/json`][] (interface)          | 12756 ns/op | 52360 ns/op | 841988 ns/op  | 5700589742 ns/op
-[`encoding/json`][] (struct)             | 12587 ns/op | 43188 ns/op | 612850 ns/op  | 5452741452 ns/op
-[`github.com/pquerna/ffjson`][]          | 10190 ns/op | 22878 ns/op | 250692 ns/op  | 2475434876 ns/op
-[`github.com/mailru/easyjson`][]         | 8815 ns/op  | 16699 ns/op | 174619 ns/op  | 2041085219 ns/op
-[`github.com/buger/jsonparser`][]        | 8126 ns/op  | 16866 ns/op | 111169 ns/op  | 1147621332 ns/op
-[`github.com/darthfennec/jsonmuncher`][] | **6339 ns/op** | **14731 ns/op** | **108270 ns/op** | **859714936 ns/op**
+Library                                   | Small JSON     | Medium JSON     | Large JSON      | Huge JSON
+:-----------------------------------------|---------------:|----------------:|----------------:|-------------------:
+[`github.com/antonholmquist/jason`][]     | 24120 ns/op    | 63887 ns/op     | 1044236 ns/op   | 9854035703 ns/op
+[`github.com/bcicen/jstream`][]           | 40813 ns/op    | 84099 ns/op     | 1969405 ns/op   | 5866067676 ns/op
+[`github.com/bitly/go-simplejson`][]      | 12923 ns/op    | 59926 ns/op     | 1000596 ns/op   | 5876533891 ns/op
+[`github.com/ugorji/go/codec`][]          | 9467 ns/op     | 56543 ns/op     | 798903 ns/op    | 7739377297 ns/op
+[`github.com/jeffail/gabs`][]             | 12494 ns/op    | 54700 ns/op     | 870205 ns/op    | 5661634428 ns/op
+[`github.com/mreiferson/go-ujson`][]      | 10737 ns/op    | 41953 ns/op     | 679211 ns/op    | 4026916938 ns/op
+[`github.com/json-iterator/go`][]         | 10582 ns/op    | 30852 ns/op     | 410814 ns/op    | 3225396334 ns/op
+[`github.com/a8m/djson`][]                | 9475 ns/op     | 33466 ns/op     | 531208 ns/op    | 3048507867 ns/op
+[`encoding/json`][] (interface streaming) | 9651 ns/op     | 55407 ns/op     | 931944 ns/op    | 5966943523 ns/op
+[`encoding/json`][] (struct streaming)    | 9257 ns/op     | 44838 ns/op     | 655320 ns/op    | 5735771777 ns/op
+[`encoding/json`][] (interface)           | 12018 ns/op    | 55449 ns/op     | 842066 ns/op    | 5701351770 ns/op
+[`encoding/json`][] (struct)              | 11285 ns/op    | 42425 ns/op     | 606856 ns/op    | 5435946960 ns/op
+[`github.com/francoispqt/gojay`][]        | 7603 ns/op     | 15310 ns/op     | 153690 ns/op    | 2090216626 ns/op
+[`github.com/pquerna/ffjson`][]           | 9163 ns/op     | 21394 ns/op     | 248859 ns/op    | 2415598919 ns/op
+[`github.com/mailru/easyjson`][]          | 7948 ns/op     | 15691 ns/op     | 175398 ns/op    | 2051049192 ns/op
+[`github.com/buger/jsonparser`][]         | 7322 ns/op     | 16174 ns/op     | 111023 ns/op    | 1135070002 ns/op
+[`github.com/darthfennec/jsonmuncher`][]  | **5937 ns/op** | **13783 ns/op** | **94460 ns/op** | **761287513 ns/op**
 
 ### Memory
 
-Library                                  | Small JSON | Medium JSON | Large JSON  | Huge JSON
-:----------------------------------------|-----------:|------------:|------------:|---------------:
-[`github.com/antonholmquist/jason`][]    | 8333 B/op  | 22444 B/op  | 421090 B/op | 4191279992 B/op
-[`github.com/bitly/go-simplejson`][]     | 3337 B/op  | 20603 B/op  | 392650 B/op | 2563132440 B/op
-[`github.com/ugorji/go/codec`][]         | 2304 B/op  | 5789 B/op   | 57458 B/op  | 2667890904 B/op
-[`github.com/Jeffail/gabs`][]            | 2649 B/op  | 14440 B/op  | 265119 B/op | 1517439336 B/op
-[`github.com/mreiferson/go-ujson`][]     | 2633 B/op  | 15203 B/op  | 288516 B/op | 1593325728 B/op
-[`github.com/json-iterator/go`][]        | 2001 B/op  | 7614 B/op   | 118215 B/op | 1839352848 B/op
-[`github.com/a8m/djson`][]               | 2345 B/op  | 13659 B/op  | 261149 B/op | 1489454784 B/op
-[`encoding/json`][] (interface)          | 2521 B/op  | 13964 B/op  | 261826 B/op | 1489375432 B/op
-[`encoding/json`][] (struct)             | 1912 B/op  | 4626 B/op   | 56265 B/op  | 1442500544 B/op
-[`github.com/pquerna/ffjson`][]          | 1752 B/op  | 4346 B/op   | 55976 B/op  | 1442499509 B/op
-[`github.com/mailru/easyjson`][]         | 1304 B/op  | 3952 B/op   | 55096 B/op  | 1510498482 B/op
-[`github.com/buger/jsonparser`][]        | 1168 B/op  | 3536 B/op   | 49616 B/op  | 360846811 B/op
-[`github.com/darthfennec/jsonmuncher`][] | **496 B/op** | **1264 B/op** | **4336 B/op** | **4342 B/op**
+Library                                   | Small JSON   | Medium JSON   | Large JSON    | Huge JSON
+:-----------------------------------------|-------------:|--------------:|--------------:|---------------:
+[`github.com/antonholmquist/jason`][]     | 8333 B/op    | 22443 B/op    | 421071 B/op   | 4191166648 B/op
+[`github.com/bcicen/jstream`][]           | 13289 B/op   | 14713 B/op    | 438465 B/op   | 1129458008 B/op
+[`github.com/bitly/go-simplejson`][]      | 3337 B/op    | 20603 B/op    | 392635 B/op   | 2563080408 B/op
+[`github.com/ugorji/go/codec`][]          | 2304 B/op    | 5789 B/op     | 57458 B/op    | 2667890632 B/op
+[`github.com/jeffail/gabs`][]             | 2649 B/op    | 14440 B/op    | 265079 B/op   | 1517427480 B/op
+[`github.com/mreiferson/go-ujson`][]      | 2633 B/op    | 15203 B/op    | 288540 B/op   | 1593388936 B/op
+[`github.com/json-iterator/go`][]         | 2001 B/op    | 7615 B/op     | 118218 B/op   | 1839351112 B/op
+[`github.com/a8m/djson`][]                | 2345 B/op    | 13659 B/op    | 261144 B/op   | 1489389136 B/op
+[`encoding/json`][] (interface streaming) | 2217 B/op    | 17036 B/op    | 341692 B/op   | 2214184568 B/op
+[`encoding/json`][] (struct streaming)    | 1608 B/op    | 7692 B/op     | 136168 B/op   | 2167391392 B/op
+[`encoding/json`][] (interface)           | 2521 B/op    | 13964 B/op    | 261799 B/op   | 1489402024 B/op
+[`encoding/json`][] (struct)              | 1912 B/op    | 4626 B/op     | 56264 B/op    | 1442501104 B/op
+[`github.com/francoispqt/gojay`][]        | 1520 B/op    | 6474 B/op     | 102668 B/op   | 1911409520 B/op
+[`github.com/pquerna/ffjson`][]           | 1752 B/op    | 4346 B/op     | 55977 B/op    | 1442499717 B/op
+[`github.com/mailru/easyjson`][]          | 1304 B/op    | 3952 B/op     | 55096 B/op    | 1510499090 B/op
+[`github.com/buger/jsonparser`][]         | 1168 B/op    | 3536 B/op     | 49616 B/op    | 360846475 B/op
+[`github.com/darthfennec/jsonmuncher`][]  | **496 B/op** | **1264 B/op** | **4336 B/op** | **4336 B/op**
 
 ### Allocations
 
-Library                                  | Small JSON    | Medium JSON   | Large JSON     | Huge JSON
-:----------------------------------------|--------------:|--------------:|---------------:|------------------:
-[`github.com/antonholmquist/jason`][]    | 104 allocs/op | 248 allocs/op | 3284 allocs/op | 49634929 allocs/op
-[`github.com/bitly/go-simplejson`][]     | 39 allocs/op  | 220 allocs/op | 2845 allocs/op | 28034845 allocs/op
-[`github.com/ugorji/go/codec`][]         | 12 allocs/op  | 36 allocs/op  | 254 allocs/op  | 18503643 allocs/op
-[`github.com/Jeffail/gabs`][]            | 47 allocs/op  | 232 allocs/op | 3041 allocs/op | 29534833 allocs/op
-[`github.com/mreiferson/go-ujson`][]     | 46 allocs/op  | 284 allocs/op | 4021 allocs/op | 34534686 allocs/op
-[`github.com/json-iterator/go`][]        | 32 allocs/op  | 101 allocs/op | 1379 allocs/op | 17002144 allocs/op
-[`github.com/a8m/djson`][]               | 34 allocs/op  | 201 allocs/op | 2746 allocs/op | 28035037 allocs/op
-[`encoding/json`][] (interface)          | 39 allocs/op  | 213 allocs/op | 2881 allocs/op | 28034766 allocs/op
-[`encoding/json`][] (struct)             | 23 allocs/op  | 30 allocs/op  | 248 allocs/op  | 10502039 allocs/op
-[`github.com/pquerna/ffjson`][]          | 21 allocs/op  | 25 allocs/op  | 243 allocs/op  | 10502029 allocs/op
-[`github.com/mailru/easyjson`][]         | 15 allocs/op  | 19 allocs/op  | 232 allocs/op  | 9502021 allocs/op
-[`github.com/buger/jsonparser`][]        | 7 allocs/op   | 7 allocs/op   | 7 allocs/op    | 1000012 allocs/op
-[`github.com/darthfennec/jsonmuncher`][] | **6 allocs/op** | **6 allocs/op** | **6 allocs/op** | **6 allocs/op**
+Library                                   | Small JSON      | Medium JSON     | Large JSON      | Huge JSON
+:-----------------------------------------|----------------:|----------------:|----------------:|------------------:
+[`github.com/antonholmquist/jason`][]     | 104 allocs/op   | 248 allocs/op   | 3284 allocs/op  | 49634480 allocs/op
+[`github.com/bcicen/jstream`][]           | 40 allocs/op    | 172 allocs/op   | 5484 allocs/op  | 28533146 allocs/op
+[`github.com/bitly/go-simplejson`][]      | 39 allocs/op    | 220 allocs/op   | 2845 allocs/op  | 28034667 allocs/op
+[`github.com/ugorji/go/codec`][]          | 12 allocs/op    | 36 allocs/op    | 254 allocs/op   | 18503643 allocs/op
+[`github.com/jeffail/gabs`][]             | 47 allocs/op    | 232 allocs/op   | 3041 allocs/op  | 29534794 allocs/op
+[`github.com/mreiferson/go-ujson`][]      | 46 allocs/op    | 284 allocs/op   | 4021 allocs/op  | 34534906 allocs/op
+[`github.com/json-iterator/go`][]         | 32 allocs/op    | 101 allocs/op   | 1379 allocs/op  | 17002141 allocs/op
+[`github.com/a8m/djson`][]                | 34 allocs/op    | 201 allocs/op   | 2746 allocs/op  | 28034807 allocs/op
+[`encoding/json`][] (interface streaming) | 38 allocs/op    | 217 allocs/op   | 2889 allocs/op  | 28034497 allocs/op
+[`encoding/json`][] (struct streaming)    | 22 allocs/op    | 34 allocs/op    | 256 allocs/op   | 10502057 allocs/op
+[`encoding/json`][] (interface)           | 39 allocs/op    | 213 allocs/op   | 2881 allocs/op  | 28034854 allocs/op
+[`encoding/json`][] (struct)              | 23 allocs/op    | 30 allocs/op    | 248 allocs/op   | 10502039 allocs/op
+[`github.com/francoispqt/gojay`][]        | 13 allocs/op    | 20 allocs/op    | 178 allocs/op   | 10002027 allocs/op
+[`github.com/pquerna/ffjson`][]           | 21 allocs/op    | 25 allocs/op    | 243 allocs/op   | 10502030 allocs/op
+[`github.com/mailru/easyjson`][]          | 15 allocs/op    | 19 allocs/op    | 232 allocs/op   | 9502023 allocs/op
+[`github.com/buger/jsonparser`][]         | 7 allocs/op     | 7 allocs/op     | 7 allocs/op     | 1000012 allocs/op
+[`github.com/darthfennec/jsonmuncher`][]  | **6 allocs/op** | **6 allocs/op** | **6 allocs/op** | **6 allocs/op**
 
 [`github.com/darthfennec/jsonmuncher`]: https://github.com/darthfennec/jsonmuncher
 [`github.com/buger/jsonparser`]: https://github.com/buger/jsonparser
 [`encoding/json`]: https://golang.org/pkg/encoding/json
+[`github.com/bcicen/jstream`]: https://github.com/bcicen/jstream
+[`github.com/francoispqt/gojay`]: https://github.com/francoispqt/gojay
 [`github.com/json-iterator/go`]: https://github.com/json-iterator/go
 [`github.com/Jeffail/gabs`]: https://github.com/Jeffail/gabs
 [`github.com/bitly/go-simplejson`]: https://github.com/bitly/go-simplejson
