@@ -6,6 +6,7 @@ import (
 	"io"
 	"strconv"
 	"unicode/utf8"
+	"unsafe"
 )
 
 // special errors
@@ -76,6 +77,14 @@ type JsonValue struct {
 	Status  JsonStatus
 	boolval bool
 	keynext bool
+}
+
+// prevent escape to the heap (unsafe, use with caution)
+// only used to avoid heap allocations when we know they're not necessary
+//go:nosplit
+func noescape(p unsafe.Pointer) unsafe.Pointer {
+	x := uintptr(p)
+	return unsafe.Pointer(x ^ 0)
 }
 
 // feedq, feed, and next should all be the same function, but they've been
@@ -217,7 +226,11 @@ L:
 		}
 		return JsonValue{buf, float64(val), buf.depth + 1, Number, Complete, false, false}, nil
 	} else {
-		f, err := strconv.ParseFloat(string(sl), 64)
+		// strconv.ParseFloat takes a string, but we only have a []byte.
+		// Converting to string requires a new alloc and a copy, plus an escape
+		// to heap for the underlying array. This line does an unsafe cast and
+		// sidesteps escape analysis, avoiding those expensive extra steps.
+		f, err := strconv.ParseFloat(*(*string)(noescape(unsafe.Pointer(&sl))), 64)
 		if err != nil {
 			return JsonValue{}, err
 		}
