@@ -1,47 +1,47 @@
 package main
 
 import (
-	"os"
-	"fmt"
 	"bufio"
+	"fmt"
+	"os"
 	"regexp"
 	"strings"
 )
 
 type inputLine struct {
 	project string
-	size string
-	time string
-	space string
-	alloc string
+	size    string
+	time    string
+	space   string
+	alloc   string
 }
 
 type outputLine struct {
 	project string
-	small string
-	medium string
-	large string
-	huge string
+	small   string
+	medium  string
+	large   string
+	huge    string
 }
 
 var projectmap = map[string]string{
-	"JsonMuncher"					: "[`github.com/darthfennec/jsonmuncher`][]",
-	"JsonParser"					: "[`github.com/buger/jsonparser`][]",
-	"EncodingJsonStruct"			: "[`encoding/json`][] (struct)",
-	"EncodingJsonInterface"			: "[`encoding/json`][] (interface)",
-	"EncodingJsonStreamStruct"		: "[`encoding/json`][] (struct streaming)",
-	"EncodingJsonStreamInterface"	: "[`encoding/json`][] (interface streaming)",
-	"Jstream"						: "[`github.com/bcicen/jstream`][]",
-	"Gojay"							: "[`github.com/francoispqt/gojay`][]",
-	"JsonIterator"					: "[`github.com/json-iterator/go`][]",
-	"Gabs"							: "[`github.com/jeffail/gabs`][]",
-	"GoSimpleJson"					: "[`github.com/bitly/go-simplejson`][]",
-	"FFJson"						: "[`github.com/pquerna/ffjson`][]",
-	"Jason"							: "[`github.com/antonholmquist/jason`][]",
-	"Ujson"							: "[`github.com/mreiferson/go-ujson`][]",
-	"Djson"							: "[`github.com/a8m/djson`][]",
-	"Ugorji"						: "[`github.com/ugorji/go/codec`][]",
-	"EasyJson"						: "[`github.com/mailru/easyjson`][]",
+	"JsonMuncher":                 "[`github.com/darthfennec/jsonmuncher`][]",
+	"JsonParser":                  "[`github.com/buger/jsonparser`][]",
+	"EncodingJsonStruct":          "[`encoding/json`][] (struct)",
+	"EncodingJsonInterface":       "[`encoding/json`][] (interface)",
+	"EncodingJsonStreamStruct":    "[`encoding/json`][] (struct streaming)",
+	"EncodingJsonStreamInterface": "[`encoding/json`][] (interface streaming)",
+	"Jstream":                     "[`github.com/bcicen/jstream`][]",
+	"Gojay":                       "[`github.com/francoispqt/gojay`][]",
+	"JsonIterator":                "[`github.com/json-iterator/go`][]",
+	"Gabs":                        "[`github.com/jeffail/gabs`][]",
+	"GoSimpleJson":                "[`github.com/bitly/go-simplejson`][]",
+	"FFJson":                      "[`github.com/pquerna/ffjson`][]",
+	"Jason":                       "[`github.com/antonholmquist/jason`][]",
+	"Ujson":                       "[`github.com/mreiferson/go-ujson`][]",
+	"Djson":                       "[`github.com/a8m/djson`][]",
+	"Ugorji":                      "[`github.com/ugorji/go/codec`][]",
+	"EasyJson":                    "[`github.com/mailru/easyjson`][]",
 }
 
 var projectorder = [...]string{
@@ -137,16 +137,16 @@ func drawTable(title string, unit string, lines []outputLine) {
 		if len(line.project) > libmax {
 			libmax = len(line.project)
 		}
-		if len(line.small) + extra > smlmax {
+		if len(line.small)+extra > smlmax {
 			smlmax = len(line.small) + extra
 		}
-		if len(line.medium) + extra > medmax {
+		if len(line.medium)+extra > medmax {
 			medmax = len(line.medium) + extra
 		}
-		if len(line.large) + extra > lrgmax {
+		if len(line.large)+extra > lrgmax {
 			lrgmax = len(line.large) + extra
 		}
-		if len(line.huge) + extra > hgemax {
+		if len(line.huge)+extra > hgemax {
 			hgemax = len(line.huge) + extra
 		}
 	}
