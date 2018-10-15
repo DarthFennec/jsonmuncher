@@ -1,3 +1,7 @@
+[![GoDoc](https://godoc.org/github.com/DarthFennec/jsonmuncher?status.svg)](https://godoc.org/github.com/DarthFennec/jsonmuncher)
+[![Go Report Card](https://goreportcard.com/badge/github.com/DarthFennec/jsonmuncher)](https://goreportcard.com/report/github.com/DarthFennec/jsonmuncher)
+[![License](https://img.shields.io/dub/l/vibe-d.svg)](https://github.com/DarthFennec/jsonmuncher/blob/master/LICENSE)
+
 JSON Muncher
 ============
 
@@ -127,6 +131,8 @@ Library                                   | Small JSON      | Medium JSON     | 
 
 API Reference
 -------------
+
+[GoDoc](https://godoc.org/github.com/DarthFennec/jsonmuncher)
 
 The API lives in the `jsonmuncher` package.
 
