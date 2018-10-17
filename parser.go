@@ -399,30 +399,9 @@ func readUnicode(buf *buffer) error {
 	}
 	var cp rune
 	if pt1 >= 0xD800 && pt1 <= 0xDFFF {
-		if buf.err != nil && buf.err != io.EOF {
-			return buf.err
-		}
-		if buf.curr != '\\' {
-			return newErrUnexpected(buf, '\\')
-		}
-		_ = feedq(buf) && feed(buf)
-		next(buf)
-		if buf.err != nil && buf.err != io.EOF {
-			return buf.err
-		}
-		if buf.curr != 'u' {
-			return newErrUnexpected(buf, 'u')
-		}
-		_ = feedq(buf) && feed(buf)
-		next(buf)
-		pt2, cx, cy, _, _, err := parseHex(buf)
+		pt2, err := readSurrogate(buf)
 		if err != nil {
 			return err
-		}
-		if pt2 < 0xD000 || pt2 > 0xDFFF {
-			return newErrUnexpectedChar(foffs(buf)-4, cx, 'D', 'd')
-		} else if pt2 < 0xDC00 {
-			return newErrUnexpectedChar(foffs(buf)-3, cy, 'C', 'D', 'E', 'F', 'c', 'd', 'e', 'f')
 		}
 		cp = 0x10000 + rune(pt1-0xD800)<<10 + rune(pt2-0xDC00)
 	} else {
@@ -446,6 +425,37 @@ func readUnicode(buf *buffer) error {
 		j++
 	}
 	return nil
+}
+
+// readSurrogate reads the second part of a UTF-16 surrogate pair encoded as a
+// pair of unicode character escapes.
+func readSurrogate(buf *buffer) (uint16, error) {
+	if buf.err != nil && buf.err != io.EOF {
+		return 0, buf.err
+	}
+	if buf.curr != '\\' {
+		return 0, newErrUnexpected(buf, '\\')
+	}
+	_ = feedq(buf) && feed(buf)
+	next(buf)
+	if buf.err != nil && buf.err != io.EOF {
+		return 0, buf.err
+	}
+	if buf.curr != 'u' {
+		return 0, newErrUnexpected(buf, 'u')
+	}
+	_ = feedq(buf) && feed(buf)
+	next(buf)
+	pt2, cx, cy, _, _, err := parseHex(buf)
+	if err != nil {
+		return 0, err
+	}
+	if pt2 < 0xD000 || pt2 > 0xDFFF {
+		return 0, newErrUnexpectedChar(foffs(buf)-4, cx, 'D', 'd')
+	} else if pt2 < 0xDC00 {
+		return 0, newErrUnexpectedChar(foffs(buf)-3, cy, 'C', 'D', 'E', 'F', 'c', 'd', 'e', 'f')
+	}
+	return pt2, nil
 }
 
 // parseHex reads the next four digits from the buffer, and parses them as a

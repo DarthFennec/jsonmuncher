@@ -55,7 +55,7 @@ func TestBasicParsing(t *testing.T) {
 }
 
 func TestObjectParsing(t *testing.T) {
-	json := "  { \"full\" : {   \"foo\":  \"bar\"  ,\"baz\"  :\"ban\" }, \"empty\" : { } , \"one\"  : \"two\"}  "
+	json := "  { \"full\" : {   \"foo\":  \"bar\"  ,\"baz\"  :\"ban\" }, \"empty\" : { }}  "
 	var buf [8]byte
 	r := strings.NewReader(json)
 	v1, e1 := Parse(r, 16)
@@ -104,26 +104,16 @@ func TestObjectParsing(t *testing.T) {
 	assert(t, eof != io.EOF || string(buf[:s]) != "empty",
 		"15", string(buf[:]), s, eof)
 	v2, e2 = v1.NextValue()
-	assert(t, v2.Type != Object || e2 != nil,
+	assert(t, v2.Type != Object,
 		"16", v2.Type, e2)
+	assert(t, e2 != nil,
+		"17", v2.Type, e2)
 	_, e3 = v2.NextValue()
 	assert(t, e3 != EndOfValue,
-		"17", e3)
-	vk, ek = v1.NextKey()
-	assert(t, vk.Type != String || ek != nil,
-		"18", vk.Type, ek)
-	s, eof = vk.Read(buf[:])
-	assert(t, eof != io.EOF || string(buf[:s]) != "one",
-		"19", string(buf[:]), s, eof)
-	v2, e2 = v1.NextValue()
-	assert(t, v2.Type != String || e2 != nil,
-		"20", v2.Type, e2)
-	s, eof = v2.Read(buf[:])
-	assert(t, eof != io.EOF || string(buf[:s]) != "two",
-		"21", string(buf[:]), s, eof)
+		"18", e3)
 	_, e2 = v1.NextValue()
 	assert(t, e2 != EndOfValue,
-		"22", e2)
+		"19", e2)
 }
 
 func TestNumericParsing(t *testing.T) {
@@ -377,71 +367,49 @@ func TestEOFErrors(t *testing.T) {
 	json := "[ null,{\"a\":\"a\",\"b\":\"b\",\"x\\uD83E\\uDDF8x\":\"y\\ny\"}]"
 	f := func(tst string, trunc int) {
 		data := json[:trunc]
-		chk := func(ex error) bool {
-			res := false
+		chk := func(ex error) {
 			if ex != nil && ex != io.EOF {
 				if ex.Error() == eofErrors[trunc] {
-					res = true
+					panic("<found eof>")
 				} else {
 					t.Fatal(tst, ex.Error())
 				}
 			}
-			return res
 		}
+		defer func() {
+			rec := recover()
+			if rec != "<found eof>" {
+				panic(rec)
+			}
+		}()
 		var buf [8]byte
 		r := strings.NewReader(data)
 		v1, e1 := Parse(r, 16)
-		if chk(e1) {
-			return
-		}
+		chk(e1)
 		v2, e2 := v1.NextValue()
-		if chk(e2) {
-			return
-		}
+		chk(e2)
 		v2, e2 = v1.NextValue()
-		if chk(e2) {
-			return
-		}
+		chk(e2)
 		vk, ek := v2.NextValue()
-		if chk(ek) {
-			return
-		}
+		chk(ek)
 		_, eof := vk.Read(buf[:])
-		if chk(eof) {
-			return
-		}
+		chk(eof)
 		vk, ek = v2.NextKey()
-		if chk(ek) {
-			return
-		}
+		chk(ek)
 		_, eof = vk.Read(buf[:])
-		if chk(eof) {
-			return
-		}
+		chk(eof)
 		vk, ek = v2.NextKey()
-		if chk(ek) {
-			return
-		}
+		chk(ek)
 		_, eof = vk.Read(buf[:])
-		if chk(eof) {
-			return
-		}
+		chk(eof)
 		v3, e3 := v2.NextValue()
-		if chk(e3) {
-			return
-		}
+		chk(e3)
 		eof = v3.Close()
-		if chk(eof) {
-			return
-		}
+		chk(eof)
 		eof = v2.Close()
-		if chk(eof) {
-			return
-		}
+		chk(eof)
 		eof = v1.Close()
-		if chk(eof) {
-			return
-		}
+		chk(eof)
 		t.Fatal("No errors caught")
 	}
 	for i := 0; i < len(json); i++ {
