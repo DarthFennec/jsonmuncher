@@ -191,74 +191,6 @@ func readKeyword(buf *buffer) (JsonValue, error) {
 	return JsonValue{buf, 0, buf.depth + 1, typ, Complete, val, false}, nil
 }
 
-// readInt is a special case of readNumber, and is designed to parse integers.
-// This parses integers in about half the time compared to strconv.ParseInt().
-func readInt(buf *buffer, sl []byte) (JsonValue, error) {
-	var val int64
-	neg := false
-	idx := 0
-	if sl[0] == '-' {
-		if len(sl) == 1 {
-			return JsonValue{}, newErrUnexpected(buf,
-				'0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
-		}
-		neg = true
-		idx = 1
-	}
-	for ; idx < len(sl); idx++ {
-		if sl[idx] <= '9' && sl[idx] >= '0' {
-			val = 10*val + int64(sl[idx]-'0')
-		} else {
-			offs := foffs(buf) + uint64(1+idx-len(sl))
-			return JsonValue{}, newErrUnexpectedChar(offs, sl[idx],
-				'0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
-		}
-	}
-	if neg {
-		val = -val
-	}
-	return JsonValue{buf, float64(val), buf.depth + 1, Number, Complete, false, false}, nil
-}
-
-// readNumber reads a numeric value from the stream.
-func readNumber(buf *buffer) (JsonValue, error) {
-	var b [32]byte
-	sl := b[:0]
-	simple := true
-L:
-	for {
-		if buf.err != nil {
-			if buf.err == io.EOF {
-				break L
-			}
-			return JsonValue{}, buf.err
-		}
-		switch buf.curr {
-		case '+', '.', 'e', 'E':
-			simple = false
-			fallthrough
-		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-			sl = append(sl, buf.curr)
-			_ = feedq(buf) && feed(buf)
-			next(buf)
-		default:
-			break L
-		}
-	}
-	if simple && len(sl) < 19 {
-		return readInt(buf, sl)
-	}
-	// strconv.ParseFloat takes a string, but we only have a []byte.
-	// Converting to string requires a new alloc and a copy, plus an escape
-	// to heap for the underlying array. This line does an unsafe cast and
-	// sidesteps escape analysis, avoiding those expensive extra steps.
-	f, err := strconv.ParseFloat(*(*string)(noescape(unsafe.Pointer(&sl))), 64)
-	if err != nil {
-		return JsonValue{}, err
-	}
-	return JsonValue{buf, f, buf.depth + 1, Number, Complete, false, false}, nil
-}
-
 // readStream reads a string, array, or object from the stream.
 func readStream(buf *buffer) (JsonValue, error) {
 	var typ JsonType
@@ -288,7 +220,8 @@ func readValue(buf *buffer) (JsonValue, error) {
 	case 'n', 't', 'f':
 		return readKeyword(buf)
 	case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-		return readNumber(buf)
+		buf.depth++
+		return JsonValue{buf, 0, buf.depth, Number, Working, false, false}, nil
 	default:
 		return JsonValue{}, newErrUnexpected(buf, '{', '[', '"', 'n', 't', 'f',
 			'-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
@@ -508,12 +441,98 @@ func streamEscape(buf *buffer, b []byte, i int) int {
 	return i
 }
 
+// readInt is a special case of readNumber, and is designed to parse integers.
+// This parses integers in about half the time compared to strconv.ParseInt().
+func readInt(data *JsonValue, sl []byte) error {
+	var val int64
+	neg := false
+	idx := 0
+	if sl[0] == '-' {
+		if len(sl) == 1 {
+			data.Status = Incomplete
+			return newErrUnexpected(data.buffer,
+				'0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+		}
+		neg = true
+		idx = 1
+	}
+	for ; idx < len(sl); idx++ {
+		if sl[idx] <= '9' && sl[idx] >= '0' {
+			val = 10*val + int64(sl[idx]-'0')
+		} else {
+			data.Status = Incomplete
+			offs := foffs(data.buffer) + uint64(1+idx-len(sl))
+			return newErrUnexpectedChar(offs, sl[idx],
+				'0', '1', '2', '3', '4', '5', '6', '7', '8', '9')
+		}
+	}
+	if neg {
+		val = -val
+	}
+	data.numval = float64(val)
+	data.Status = Complete
+	data.buffer.depth--
+	return nil
+}
+
+// readNumber reads a numeric value from the stream.
+func readNumber(data *JsonValue) error {
+	var b [32]byte
+	sl := b[:0]
+	simple := true
+L:
+	for {
+		if data.buffer.err != nil {
+			if data.buffer.err == io.EOF {
+				break L
+			}
+			data.Status = Incomplete
+			return data.buffer.err
+		}
+		switch data.buffer.curr {
+		case '+', '.', 'e', 'E':
+			simple = false
+			fallthrough
+		case '-', '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+			sl = append(sl, data.buffer.curr)
+			_ = feedq(data.buffer) && feed(data.buffer)
+			next(data.buffer)
+		default:
+			break L
+		}
+	}
+	if simple && len(sl) < 19 {
+		return readInt(data, sl)
+	}
+	// strconv.ParseFloat takes a string, but we only have a []byte.
+	// Converting to string requires a new alloc and a copy, plus an escape
+	// to heap for the underlying array. This line does an unsafe cast and
+	// sidesteps escape analysis, avoiding those expensive extra steps.
+	f, err := strconv.ParseFloat(*(*string)(noescape(unsafe.Pointer(&sl))), 64)
+	if err != nil {
+		data.Status = Incomplete
+		return err
+	}
+	data.numval = f
+	data.Status = Complete
+	data.buffer.depth--
+	return nil
+}
+
 // ValueNum returns the value of a Number.
 func (data *JsonValue) ValueNum() (float64, error) {
-	if data.Type == Number {
+	if data.Type != Number {
+		return 0, newErrTypeMismatch(data.Type, Number)
+	} else if data.Status == Complete {
 		return data.numval, nil
+	} else if data.Status != Working {
+		return 0, ErrIncomplete
 	}
-	return 0, newErrTypeMismatch(data.Type, Number)
+	err := readNumber(data)
+	if err != nil {
+		return 0, err
+	}
+	return data.numval, nil
 }
 
 // ValueBool returns the value of a Bool.
@@ -695,6 +714,9 @@ func (data *JsonValue) Close() error {
 	} else if data.depth != data.buffer.depth {
 		return ErrWorkingChild
 	}
+	if data.Type == Number {
+		return closeNumber(data)
+	}
 	if data.boolval == false {
 		if data.Type == Object && data.buffer.curr == '{' ||
 			data.Type == Array && data.buffer.curr == '[' {
@@ -702,6 +724,44 @@ func (data *JsonValue) Close() error {
 			next(data.buffer)
 		}
 	}
+	return closeObjectArray(data)
+}
+
+// closeNumber is a special case for Close, and works on Numbers.
+func closeNumber(data *JsonValue) error {
+	for {
+		if data.buffer.err != nil {
+			if data.buffer.err == io.EOF {
+				data.Status = Incomplete
+				data.buffer.depth--
+				return nil
+			}
+			data.Status = Incomplete
+			return data.buffer.err
+		}
+		i := data.buffer.offs - 1
+		for i < data.buffer.erroffs {
+			switch data.buffer.data[i] {
+			case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '+', '-', 'e', 'E':
+				i++
+			default:
+				data.buffer.offs = i
+				_ = feedq(data.buffer) && feed(data.buffer)
+				next(data.buffer)
+				data.Status = Incomplete
+				data.buffer.depth--
+				return nil
+			}
+		}
+		data.buffer.offs = data.buffer.erroffs
+		_ = feedq(data.buffer) && feed(data.buffer)
+		next(data.buffer)
+	}
+}
+
+// closeObjectArray is the general case for Close, and works on Objects and
+// Arrays.
+func closeObjectArray(data *JsonValue) error {
 	instr := data.Type == String
 	depth := 0
 	for {

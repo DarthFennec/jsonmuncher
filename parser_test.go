@@ -152,9 +152,19 @@ func TestNumericParsing(t *testing.T) {
 	vn, en = v2.ValueNum()
 	assert(t, vn != 75.5 || en != nil,
 		"11", vn, en)
+	vn, en = v2.ValueNum()
+	assert(t, vn != 75.5 || en != nil,
+		"12", vn, en)
 	_, e2 = v1.NextValue()
 	assert(t, e2 != EndOfValue,
-		"12", e2)
+		"13", e2)
+	r = strings.NewReader("123")
+	v3, e3 := Parse(r, 16)
+	assert(t, v3.Type != Number || e3 != nil,
+		"14", v3.Type, e3)
+	en = v3.Close()
+	assert(t, en != nil,
+		"15", vn, en)
 }
 
 func TestStringParsing(t *testing.T) {
@@ -432,7 +442,7 @@ func TestFindKeyEOFErrors(t *testing.T) {
 	sk, _, mk, ek = v1.FindKey("foo")
 	assert(t, ek == nil,
 		"4", sk, mk, ek)
-	r = strings.NewReader("{\"foo\":1ee1}")
+	r = strings.NewReader("{\"foo\":no}")
 	v1, e1 = Parse(r, 16)
 	assert(t, v1.Type != Object || e1 != nil,
 		"5", v1.Type, e1)
@@ -454,17 +464,23 @@ func TestBadKeywordErrors(t *testing.T) {
 
 func TestBadNumberErrors(t *testing.T) {
 	r := strings.NewReader("-")
-	_, e1 := Parse(r, 16)
+	x, _ := Parse(r, 16)
+	_, e1 := x.ValueNum()
 	assert(t, e1 == nil || e1.Error() != "Unexpected EOF at file offset 1, expected one of '0'-'9'",
 		"1", e1)
 	r = strings.NewReader("1-2")
-	_, e1 = Parse(r, 16)
+	x, _ = Parse(r, 16)
+	_, e1 = x.ValueNum()
 	assert(t, e1 == nil || e1.Error() != "Unexpected '-' at file offset 1, expected one of '0'-'9'",
 		"2", e1)
 	r = strings.NewReader("1.e")
-	_, e1 = Parse(r, 16)
+	x, _ = Parse(r, 16)
+	_, e1 = x.ValueNum()
 	assert(t, e1 == nil || e1.Error() != "strconv.ParseFloat: parsing \"1.e\": invalid syntax",
 		"3", e1)
+	_, e1 = x.ValueNum()
+	assert(t, e1 == nil || e1.Error() != "Status incomplete denotes failed read",
+		"4", e1)
 }
 
 func TestBadStringErrors(t *testing.T) {
@@ -605,70 +621,75 @@ func TestStreamErrors(t *testing.T) {
 	_, err = f("n ", 1)
 	assert(t, err != streamerr,
 		"3", err)
-	_, err = f("- ", 1)
+	x, _ := f("- ", 1)
+	_, err = x.ValueNum()
 	assert(t, err != streamerr,
 		"4", err)
-	x, _ := f("{ ", 1)
+	x, _ = f("- ", 1)
 	err = x.Close()
 	assert(t, err != streamerr,
 		"5", err)
+	x, _ = f("{ ", 1)
+	err = x.Close()
+	assert(t, err != streamerr,
+		"6", err)
 	_, err = x.NextKey()
 	assert(t, err.Error() != "Status incomplete denotes failed read",
-		"6", err)
+		"7", err)
 	_, err = x.NextValue()
 	assert(t, err.Error() != "Status incomplete denotes failed read",
-		"7", err)
+		"8", err)
 	err = x.Close()
 	assert(t, err.Error() != "Status incomplete denotes failed read",
-		"8", err)
+		"9", err)
 	x, _ = f("[ ", 1)
 	_, err = x.NextValue()
 	assert(t, err != streamerr,
-		"9", err)
+		"10", err)
 	x, _ = f("[null, ", 5)
 	x.NextValue()
 	_, err = x.NextValue()
 	assert(t, err != streamerr,
-		"10", err)
+		"11", err)
 	x, _ = f("{\"\" ", 3)
 	_, err = x.NextValue()
 	assert(t, err != streamerr,
-		"11", err)
+		"12", err)
 	x, _ = f("{\"\":null ", 8)
 	x.NextValue()
 	_, err = x.NextKey()
 	assert(t, err != streamerr,
-		"12", err)
+		"13", err)
 	x, _ = f("{\"\":null, ", 9)
 	x.NextValue()
 	_, err = x.NextKey()
 	assert(t, err != streamerr,
-		"13", err)
+		"14", err)
 	x, _ = f("{ ", 1)
 	_, err = x.NextKey()
 	assert(t, err != streamerr,
-		"14", err)
+		"15", err)
 	x, _ = f("\" ", 1)
 	_, err = x.Read(buf[:])
 	assert(t, err != streamerr,
-		"15", err)
+		"16", err)
 	_, err = x.Read(buf[:])
 	assert(t, err.Error() != "Status incomplete denotes failed read",
-		"16", err)
+		"17", err)
 	x, _ = f("\"\\ ", 2)
 	_, err = x.Read(buf[:])
 	assert(t, err != streamerr,
-		"17", err)
+		"18", err)
 	x, _ = f("\"\\uD83E ", 7)
 	_, err = x.Read(buf[:])
 	assert(t, err != streamerr,
-		"18", err)
+		"19", err)
 	x, _ = f("\"\\uD83E\\ ", 8)
 	_, err = x.Read(buf[:])
 	assert(t, err != streamerr,
-		"19", err)
+		"20", err)
 	x, _ = f("\"\\uD83E\\u ", 9)
 	_, err = x.Read(buf[:])
 	assert(t, err != streamerr,
-		"20", err)
+		"21", err)
 }

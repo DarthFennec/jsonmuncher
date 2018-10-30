@@ -1,6 +1,6 @@
 [![GoDoc](https://godoc.org/github.com/DarthFennec/jsonmuncher?status.svg)](https://godoc.org/github.com/DarthFennec/jsonmuncher)
 [![Go Report Card](https://goreportcard.com/badge/github.com/DarthFennec/jsonmuncher)](https://goreportcard.com/report/github.com/DarthFennec/jsonmuncher)
-[![License](https://img.shields.io/dub/l/vibe-d.svg)](https://github.com/DarthFennec/jsonmuncher/blob/master/LICENSE)
+[![License](https://img.shields.io/github/license/DarthFennec/jsonmuncher.svg)](https://github.com/DarthFennec/jsonmuncher/blob/master/LICENSE)
 
 JSON Muncher
 ============
@@ -136,9 +136,6 @@ API Reference
 
 The API lives in the `jsonmuncher` package.
 
-If the end of the stream is unexpectedly reached at any point, a
-`jsonmuncher.UnexpectedEOF` error is returned.
-
 ### `Parse()`
 
 ``` go
@@ -246,8 +243,8 @@ func (data *JsonValue) Close() error
 An implementation of the `io.Closer` interface. When called, this "closes" the
 `JsonValue` by simply discarding the remainder of the value from the stream. Use
 this if you don't want the rest of the value's data, as it's a good deal faster
-than parsing. This is effective when used with `String`s, `Object`s, or
-`Array`s.
+than parsing. This is effective when used with `String`s, `Number`s, `Object`s,
+or `Array`s.
 
 `NextKey()`, `NextValue()`, and `Close()` cannot be called on an `Object` or
 `Array` that has a partially-parsed child; you must fully parse or `Close()` a
